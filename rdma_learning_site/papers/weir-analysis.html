@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weir: Delay-based RNIC Cache Control Software Middleware - 论文解读</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <link rel="stylesheet" href="../styles/paper.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-network-wired"></i>
+                <span>RDMA研究平台</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">首页</a></li>
+                <li><a href="../index.html#papers">核心论文</a></li>
+                <li><a href="../index.html#concepts">基础概念</a></li>
+                <li><a href="../index.html#resources">学习资源</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="paper-header-section">
+        <div class="container">
+            <div class="paper-breadcrumb">
+                <a href="../index.html">首页</a> <i class="fas fa-chevron-right"></i>
+                <a href="../index.html#papers">核心论文</a> <i class="fas fa-chevron-right"></i>
+                <span>Weir中间件分析</span>
+            </div>
+            <h1 class="paper-main-title">Weir: Delay-based RNIC Cache Control Software Middleware</h1>
+            <div class="paper-meta">
+                <span class="paper-venue"><i class="fas fa-code"></i> 软件中间件</span>
+                <span class="paper-category"><i class="fas fa-tag"></i> 缓存控制</span>
+                <span class="paper-impact"><i class="fas fa-chart-line"></i> 性能优化</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="paper-content">
+        <div class="container">
+            <div class="content-layout">
+                <aside class="paper-toc">
+                    <h3>目录导航</h3>
+                    <ul>
+                        <li><a href="#abstract">论文摘要</a></li>
+                        <li><a href="#contributions">核心贡献</a></li>
+                        <li><a href="#technical-details">技术细节</a></li>
+                        <li><a href="#experiments">实验结果</a></li>
+                        <li><a href="#understanding">我的理解</a></li>
+                        <li><a href="#significance">学术意义</a></li>
+                    </ul>
+                </aside>
+
+                <main class="paper-main-content">
+                    <div class="content-section" id="abstract">
+                        <h2><i class="fas fa-file-alt"></i> 论文摘要</h2>
+                        <div class="abstract-box">
+                            <p>Weir是一种基于延迟感知的软件中间件，专门用于控制RNIC缓存利用率，解决高并发QP场景下WQE缓存未命中导致的性能急剧下降问题。通过监控WQE生命周期和实时缓存压力，采用自适应速率控制算法动态调整门铃频率，实现了在16K活跃QP规模下仍能保持线速传输，相比商用网卡最高提升60%的吞吐量。
+                            </p>
+
+                            <div class="paper-preview-section">
+                                <button class="preview-btn" onclick="openPaperPreview()">
+                                    <i class="fas fa-file-pdf"></i>
+                                    查看论文原文
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="key-metrics">
+                            <div class="metric-item">
+                                <span class="metric-value">60%</span>
+                                <span class="metric-label">吞吐量提升</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-value">16K</span>
+                                <span class="metric-label">支持活跃QP</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-value">5-10x</span>
+                                <span class="metric-label">缓存未命中降低</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="metric-value">透明</span>
+                                <span class="metric-label">应用兼容性</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section" id="contributions">
+                        <h2><i class="fas fa-lightbulb"></i> 核心贡献</h2>
+
+                        <div class="contribution-grid">
+                            <div class="contribution-card">
+                                <div class="contribution-icon">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <h3>根本问题识别</h3>
+                                <p><strong>WQE缓存未命中的深层原因：</strong></p>
+                                <ul>
+                                    <li><strong>速率不匹配：</strong>CPU生产WQE的速率与RNIC消费速率不匹配</li>
+                                    <li><strong>缓存溢出：</strong>大量连接下WQE缓存表项生成和释放失衡</li>
+                                    <li><strong>性能崩溃：</strong>缓存未命中导致PCIe带宽激增，性能急剧下降</li>
+                                </ul>
+                                <div class="problem-stats">
+                                    <p>📊 <strong>现象：</strong>连接数超过阈值时，吞吐量下降50-80%</p>
+                                    <p>🔍 <strong>根因：</strong>WQE、ICM、MTT/MPT多级缓存连锁失效</p>
+                                </div>
+                            </div>
+
+                            <div class="contribution-card">
+                                <div class="contribution-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <h3>延迟感知机制</h3>
+                                <p><strong>创新的缓存压力推断方法：</strong></p>
+                                <ul>
+                                    <li><strong>WQE生命周期监控：</strong>精确计算从post-send到CQE返回的延迟</li>
+                                    <li><strong>间接推断：</strong>通过延迟变化间接了解RNIC缓存占用情况</li>
+                                    <li><strong>实时调整：</strong>基于延迟反馈动态控制门铃速率</li>
+                                </ul>
+                                <div class="innovation-highlight">
+                                    <p>💡 <strong>核心洞察：</strong>WQE延迟直接反映RNIC内部缓存压力状态</p>
+                                </div>
+                            </div>
+
+                            <div class="contribution-card">
+                                <div class="contribution-icon">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <h3>软件中间件架构</h3>
+                                <p><strong>三大核心模块：</strong></p>
+                                <ul>
+                                    <li><strong>生命周期监控器：</strong>追踪每个WQE的完整生命周期</li>
+                                    <li><strong>活跃QP监控器：</strong>统计全局活跃QP数量，提供规模感知</li>
+                                    <li><strong>速率控制模块：</strong>AIAD算法动态调整门铃频率</li>
+                                </ul>
+                                <div class="memory-breakdown">
+                                    <p>🔧 <strong>实现特点：</strong></p>
+                                    <ul>
+                                        <li>标准Verbs接口兼容</li>
+                                        <li>对应用程序完全透明</li>
+                                        <li>用户空间实现，易于部署</li>
+                                        <li>O(1)复杂度的QP状态管理</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section" id="technical-details">
+                        <h2><i class="fas fa-microchip"></i> 技术细节</h2>
+
+                        <div class="tech-detail-tabs">
+                            <div class="tab-buttons">
+                                <button class="tab-btn active" data-tab="delay-sensing">延迟感知</button>
+                                <button class="tab-btn" data-tab="rate-control">速率控制</button>
+                                <button class="tab-btn" data-tab="architecture">中间件架构</button>
+                                <button class="tab-btn" data-tab="implementation">实现细节</button>
+                            </div>
+
+                            <div class="tab-content">
+                                <div id="delay-sensing" class="tab-panel active">
+                                    <h3>延迟感知机制</h3>
+                                    <div class="delay-monitoring-flow">
+                                        <h4><i class="fas fa-heartbeat"></i> WQE生命周期监控</h4>
+                                        <div class="lifecycle-stages">
+                                            <div class="stage-item">
+                                                <div class="stage-icon">1</div>
+                                                <div class="stage-content">
+                                                    <h5>Doorbell时刻 (Tdoorbell)</h5>
+                                                    <p>应用程序调用post-send时记录时间戳</p>
+                                                </div>
+                                            </div>
+                                            <div class="stage-item">
+                                                <div class="stage-icon">2</div>
+                                                <div class="stage-content">
+                                                    <h5>WQE处理阶段</h5>
+                                                    <p>包括调度等待、DMA传输、数据包序列化</p>
+                                                </div>
+                                            </div>
+                                            <div class="stage-item">
+                                                <div class="stage-icon">3</div>
+                                                <div class="stage-content">
+                                                    <h5>CQE返回 (Tcqe)</h5>
+                                                    <p>任务完成时生成CQE，记录完成时间戳</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="delay-formula">
+                                            <h4>延迟计算公式</h4>
+                                            <div class="formula-box">
+                                                <code>Delay = Tcqe - Tdoorbell</code>
+                                            </div>
+                                            <p>使用指数加权移动平均(EWMA)过滤噪声：</p>
+                                            <div class="formula-box">
+                                                <code>smoothed_delay = α × current_delay + (1-α) × smoothed_delay</code>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="delay-interpretation">
+                                        <h4><i class="fas fa-chart-line"></i> 延迟解读策略</h4>
+                                        <div class="delay-zones">
+                                            <div class="zone low-delay">
+                                                <h5>🟢 低延迟区 (delay < α × base_delay)</h5>
+                                                        <p><strong>含义：</strong>WQE队列较短，RNIC可能面临饥饿</p>
+                                                        <p><strong>动作：</strong>加速门铃频率，增加WQE供给</p>
+                                            </div>
+                                            <div class="zone normal-delay">
+                                                <h5>🟡 正常区 (α × base_delay < delay < β × base_delay)</h5>
+                                                        <p><strong>含义：</strong>缓存占用处于预期水平</p>
+                                                        <p><strong>动作：</strong>维持当前门铃频率</p>
+                                            </div>
+                                            <div class="zone high-delay">
+                                                <h5>🔴 高延迟区 (delay > β × base_delay)</h5>
+                                                <p><strong>含义：</strong>缓存占用过高，即将溢出</p>
+                                                <p><strong>动作：</strong>减慢门铃频率，降低缓存压力</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="rate-control" class="tab-panel">
+                                    <h3>自适应速率控制算法</h3>
+                                    <div class="control-algorithm">
+                                        <h4><i class="fas fa-algorithm"></i> AIAD控制策略</h4>
+                                        <p><strong>加性增加加性减少</strong> (Additive Increase Additive Decrease)</p>
+
+                                        <div class="algorithm-flow">
+                                            <div class="algo-step">
+                                                <h5>1. 参数动态计算</h5>
+                                                <div class="param-formulas">
+                                                    <p><code>α = f(active_qps_count)</code> - 基于活跃QP数量</p>
+                                                    <p><code>β = g(active_qps_count)</code> - 调整因子计算</p>
+                                                    <p><code>base_delay = baseline_measurement</code> - 基准延迟</p>
+                                                </div>
+                                            </div>
+                                            <div class="algo-step">
+                                                <h5>2. 速率调整逻辑</h5>
+                                                <div class="rate-adjustment">
+                                                    <div class="adjustment-case">
+                                                        <strong>加速条件：</strong><br>
+                                                        <code>if (delay < α × base_delay) rate += increase_step</code>
+                                                    </div>
+                                                    <div class="adjustment-case">
+                                                        <strong>减速条件：</strong><br>
+                                                        <code>if (delay > β × base_delay) rate -= decrease_step</code>
+                                                    </div>
+                                                    <div class="adjustment-case">
+                                                        <strong>稳定条件：</strong><br>
+                                                        <code>else maintain current rate</code>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="algo-step">
+                                                <h5>3. Credit生成机制</h5>
+                                                <div class="credit-mechanism">
+                                                    <p><strong>时间间隔计算：</strong></p>
+                                                    <code>time_deadline = now + wqe_size / target_rate</code>
+                                                    <p><strong>门铃控制：</strong>只有获得credit时才执行门铃操作</p>
+                                                    <p><strong>大WQE处理：</strong>切片处理，避免突发流量</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="convergence-analysis">
+                                        <h4><i class="fas fa-target"></i> 收敛特性分析</h4>
+                                        <div class="convergence-properties">
+                                            <div class="property-item">
+                                                <h5>快速收敛</h5>
+                                                <p>在100Gbps网络下能快速稳定在接近线速水平</p>
+                                            </div>
+                                            <div class="property-item">
+                                                <h5>自适应调整</h5>
+                                                <p>根据网络瓶颈自动调整到最优工作点</p>
+                                            </div>
+                                            <div class="property-item">
+                                                <h5>稳定性保证</h5>
+                                                <p>通过base_delay参数调整可收敛到不同稳定点</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="architecture" class="tab-panel">
+                                    <h3>中间件架构设计</h3>
+                                    <div class="middleware-architecture">
+                                        <div class="arch-overview">
+                                            <h4><i class="fas fa-sitemap"></i> 整体架构</h4>
+                                            <div class="component-grid">
+                                                <div class="component-box monitor">
+                                                    <h5>生命周期监控器</h5>
+                                                    <ul>
+                                                        <li>WQE延迟计算</li>
+                                                        <li>EWMA平滑处理</li>
+                                                        <li>CQE强制生成</li>
+                                                        <li>时钟同步机制</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="component-box tracker">
+                                                    <h5>活跃QP监控器</h5>
+                                                    <ul>
+                                                        <li>位图状态管理</li>
+                                                        <li>O(1)查找复杂度</li>
+                                                        <li>控制路径监听</li>
+                                                        <li>数据路径追踪</li>
+                                                    </ul>
+                                                </div>
+                                                <div class="component-box controller">
+                                                    <h5>速率控制模块</h5>
+                                                    <ul>
+                                                        <li>AIAD算法实现</li>
+                                                        <li>Credit生成调度</li>
+                                                        <li>参数自适应调整</li>
+                                                        <li>门铃频率控制</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="interaction-flow">
+                                            <h4><i class="fas fa-exchange-alt"></i> 组件交互流程</h4>
+                                            <div class="flow-steps">
+                                                <div class="flow-step">
+                                                    <div class="step-number">1</div>
+                                                    <div class="step-content">
+                                                        <h6>应用程序调用post-send</h6>
+                                                        <p>中间件拦截调用，记录时间戳</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flow-step">
+                                                    <div class="step-number">2</div>
+                                                    <div class="step-content">
+                                                        <h6>检查Credit可用性</h6>
+                                                        <p>根据当前速率限制决定是否执行门铃</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flow-step">
+                                                    <div class="step-number">3</div>
+                                                    <div class="step-content">
+                                                        <h6>CQE返回处理</h6>
+                                                        <p>计算延迟，更新统计信息</p>
+                                                    </div>
+                                                </div>
+                                                <div class="flow-step">
+                                                    <div class="step-number">4</div>
+                                                    <div class="step-content">
+                                                        <h6>速率调整决策</h6>
+                                                        <p>基于延迟反馈调整下一周期的速率</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="implementation" class="tab-panel">
+                                    <h3>关键实现细节</h3>
+                                    <div class="implementation-details">
+                                        <div class="detail-section">
+                                            <h4><i class="fas fa-map"></i> QP状态管理</h4>
+                                            <div class="qp-management">
+                                                <div class="mgmt-feature">
+                                                    <h5>位图索引机制</h5>
+                                                    <p>为每个RNIC创建位图，使用QPN作为索引，实现O(1)时间复杂度的状态查找和更新。</p>
+                                                    <div class="code-example">
+                                                        <code>bitmap[qpn] = 1  // 标记QP为活跃状态</code>
+                                                    </div>
+                                                </div>
+                                                <div class="mgmt-feature">
+                                                    <h5>双路径监控</h5>
+                                                    <p><strong>控制路径：</strong>监听ibv_create_qp、ibv_destroy_qp等调用</p>
+                                                    <p><strong>数据路径：</strong>追踪post WQE和poll CQE操作</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="detail-section">
+                                            <h4><i class="fas fa-clock"></i> 时钟同步优化</h4>
+                                            <div class="clock-sync">
+                                                <p><strong>问题：</strong>硬件时钟与软件时钟存在偏差，影响延迟计算精度</p>
+                                                <p><strong>解决方案：</strong>每1000个WQE进行一次软硬件时钟同步</p>
+                                                <div class="sync-overhead">
+                                                    <h5>开销分析</h5>
+                                                    <ul>
+                                                        <li>99.9%的WQE开销 < 1000 CPU周期</li>
+                                                        <li>0.1%的WQE开销 ≈ 4000 CPU周期（同步开销）</li>
+                                                        <li>整体CPU开销可忽略不计</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="detail-section">
+                                            <h4><i class="fas fa-shield-alt"></i> 兼容性保证</h4>
+                                            <div class="compatibility-features">
+                                                <div class="compat-item">
+                                                    <h5>Verbs接口透明</h5>
+                                                    <p>支持标准libibverbs API，无需修改现有应用代码</p>
+                                                </div>
+                                                <div class="compat-item">
+                                                    <h5>CQE聚合处理</h5>
+                                                    <p>强制生成的额外CQE对上层应用透明，通过聚合机制隐藏</p>
+                                                </div>
+                                                <div class="compat-item">
+                                                    <h5>用户空间实现</h5>
+                                                    <p>基于现有RNIC用户空间驱动，无需内核修改</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="detail-section">
+                                            <h4><i class="fas fa-cut"></i> 大WQE切片处理</h4>
+                                            <div class="wqe-slicing">
+                                                <p><strong>目标：</strong>避免大WQE导致的credit生成间隔过长和流量突发</p>
+                                                <div class="slicing-strategy">
+                                                    <h5>切片策略</h5>
+                                                    <ol>
+                                                        <li>将大WQE切分为小WQE形式</li>
+                                                        <li>实现更细粒度的门铃控制</li>
+                                                        <li>聚合多个小WQE的CQE</li>
+                                                        <li>对应用程序保持透明</li>
+                                                    </ol>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section" id="experiments">
+                        <h2><i class="fas fa-chart-bar"></i> 实验结果</h2>
+
+                        <div class="experiment-grid">
+                            <div class="experiment-card">
+                                <h3><i class="fas fa-rocket"></i> 吞吐量性能</h3>
+                                <div class="throughput-results">
+                                    <div class="result-comparison">
+                                        <h4>不同消息大小下的表现</h4>
+                                        <div class="message-size-results">
+                                            <div class="size-result">
+                                                <span class="size-label">512B</span>
+                                                <div class="performance-bars">
+                                                    <div class="bar weir" style="width: 95%;">Weir: 保持高性能</div>
+                                                    <div class="bar cx6" style="width: 60%;">CX6: 性能下降40%</div>
+                                                </div>
+                                            </div>
+                                            <div class="size-result">
+                                                <span class="size-label">256B</span>
+                                                <div class="performance-bars">
+                                                    <div class="bar weir" style="width: 90%;">Weir: 基本维持</div>
+                                                    <div class="bar cx6" style="width: 45%;">CX6: 性能下降55%</div>
+                                                </div>
+                                            </div>
+                                            <div class="size-result">
+                                                <span class="size-label">128B</span>
+                                                <div class="performance-bars">
+                                                    <div class="bar weir" style="width: 85%;">Weir: 最高水平</div>
+                                                    <div class="bar cx6" style="width: 35%;">CX6: 性能下降65%</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="key-findings">
+                                        <h4>🔍 关键发现</h4>
+                                        <ul>
+                                            <li>在8K-16K QPs区间，Weir吞吐量提升<strong>1.5-2倍</strong></li>
+                                            <li>TX Depth限制方案在高并发下仍无法避免性能突降</li>
+                                            <li>Weir通过避免WQE缓存未命中，根本性解决了性能瓶颈</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="experiment-card">
+                                <h3><i class="fas fa-memory"></i> 缓存未命中率</h3>
+                                <div class="cache-miss-results">
+                                    <div class="miss-rate-comparison">
+                                        <h4>多级缓存未命中率对比</h4>
+                                        <div class="cache-types">
+                                            <div class="cache-type">
+                                                <h5>ICM缓存</h5>
+                                                <div class="miss-stats">
+                                                    <span class="miss-label">Weir</span>
+                                                    <div class="miss-bar low" style="width: 10%;">
+                                                        <span class="miss-value">约1个数量级降低</span>
+                                                    </div>
+                                                </div>
+                                                <div class="miss-stats">
+                                                    <span class="miss-label">CX6</span>
+                                                    <div class="miss-bar high" style="width: 100%;">
+                                                        <span class="miss-value">频繁未命中</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="cache-type">
+                                                <h5>MTT/MPT缓存</h5>
+                                                <div class="miss-stats">
+                                                    <span class="miss-label">Weir</span>
+                                                    <div class="miss-bar low" style="width: 15%;">
+                                                        <span class="miss-value">显著降低</span>
+                                                    </div>
+                                                </div>
+                                                <div class="miss-stats">
+                                                    <span class="miss-label">CX6</span>
+                                                    <div class="miss-bar high" style="width: 100%;">
+                                                        <span class="miss-value">高未命中率</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="miss-rate-insight">
+                                        <h4>💡 缓存优化机理</h4>
+                                        <ul>
+                                            <li><strong>门铃频率降低</strong> → DMA查找QPC频率减少 → ICM缓存未命中减少</li>
+                                            <li><strong>WQE缓存未命中减少</strong> → MTT/MPT预取减少 → 间接优化效果</li>
+                                            <li><strong>多级缓存协同</strong> → 整体系统性能提升</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="experiment-card">
+                                <h3><i class="fas fa-balance-scale"></i> 稳定性评估</h3>
+                                <div class="stability-results">
+                                    <div class="convergence-demo">
+                                        <h4>收敛特性展示</h4>
+                                        <div class="convergence-scenarios">
+                                            <div class="scenario">
+                                                <h5>100Gbps网络环境</h5>
+                                                <p>快速稳定在接近线速水平，延迟收敛平滑</p>
+                                                <div class="convergence-time">收敛时间: <strong>&lt; 5秒</strong></div>
+                                            </div>
+                                            <div class="scenario">
+                                                <h5>40Gbps瓶颈环境</h5>
+                                                <p>自动识别网络瓶颈，迅速收敛到40Gbps</p>
+                                                <div class="convergence-time">收敛时间: <strong>&lt; 3秒</strong></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="parameter-tuning">
+                                        <h4>参数调优效果</h4>
+                                        <p>通过调整base_delay参数，Weir能使缓存占用收敛到不同的稳定点：</p>
+                                        <ul>
+                                            <li><strong>保守模式：</strong>较低的base_delay，更稳定但稍慢的响应</li>
+                                            <li><strong>激进模式：</strong>较高的base_delay，更快响应但可能有轻微波动</li>
+                                            <li><strong>自适应模式：</strong>根据QP规模自动调整参数</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="experiment-card">
+                                <h3><i class="fas fa-stopwatch"></i> 开销分析</h3>
+                                <div class="overhead-analysis">
+                                    <div class="fct-analysis">
+                                        <h4>流完成时间(FCT)对比</h4>
+                                        <div class="fct-results">
+                                            <div class="fct-item">
+                                                <span class="fct-label">Weir FCT</span>
+                                                <div class="fct-bar normal" style="width: 100%;">
+                                                    <span class="fct-value">与CX6基本相同</span>
+                                                </div>
+                                            </div>
+                                            <div class="fct-item">
+                                                <span class="fct-label">CX6 FCT</span>
+                                                <div class="fct-bar normal" style="width: 100%;">
+                                                    <span class="fct-value">参考基准</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p class="fct-note">✅ Weir不影响整体流完成时间，延迟开销可忽略</p>
+                                    </div>
+                                    <div class="cpu-overhead">
+                                        <h4>CPU开销统计</h4>
+                                        <div class="cpu-stats">
+                                            <div class="cpu-distribution">
+                                                <div class="cpu-category">
+                                                    <span class="category-label">99.9% WQE</span>
+                                                    <span class="category-value">&lt; 1000 CPU周期</span>
+                                                    <span class="category-desc">正常处理开销</span>
+                                                </div>
+                                                <div class="cpu-category sync">
+                                                    <span class="category-label">0.1% WQE</span>
+                                                    <span class="category-value">≈ 4000 CPU周期</span>
+                                                    <span class="category-desc">时钟同步开销</span>
+                                                </div>
+                                            </div>
+                                            <p class="cpu-conclusion">📊 整体CPU开销可忽略不计，不影响应用程序性能</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section" id="understanding">
+                        <h2><i class="fas fa-brain"></i> 我的理解</h2>
+
+                        <div class="understanding-content">
+                            <div class="insight-box">
+                                <h3><i class="fas fa-key"></i> 核心洞察</h3>
+                                <p>Weir的最大价值在于<strong>从软件角度解决了硬件问题</strong>。它没有试图改变RNIC的硬件设计，而是通过精巧的软件中间件，巧妙地控制了硬件资源的使用模式。这种"软件定义硬件行为"的思路，为解决类似的硬件瓶颈问题提供了全新的视角。
+                                </p>
+
+                                <blockquote>
+                                    💡 <strong>设计哲学：</strong>"不改变硬件，改变硬件的使用方式" - 这是系统优化的经典思维
+                                </blockquote>
+                            </div>
+
+                            <div class="analogy-section">
+                                <h3><i class="fas fa-lightbulb"></i> 生动类比</h3>
+                                <div class="analogy-card">
+                                    <h4>🚦 交通流量控制类比</h4>
+                                    <p><strong>传统RNIC</strong>
+                                        就像一个没有红绿灯的繁忙路口。当车流量（QP数量）较少时，交通顺畅；但当车流量激增时，就会发生严重拥堵，甚至交通瘫痪。</p>
+
+                                    <p><strong>Weir中间件</strong> 则像一个智能交通控制系统：</p>
+                                    <ul>
+                                        <li>🚦 <strong>延迟感知</strong> = 路口传感器，实时监测交通状况</li>
+                                        <li>⏱️ <strong>速率控制</strong> = 智能红绿灯，动态调整通行节奏</li>
+                                        <li>📊 <strong>全局监控</strong> = 交通指挥中心，统筹所有路口状态</li>
+                                        <li>🎯 <strong>自适应调整</strong> = AI优化算法，根据实时情况优化信号灯</li>
+                                    </ul>
+                                    <p>关键是：<strong>不改变道路硬件，只改变车辆通行的时机和节奏</strong>，就能显著提升整体交通效率。</p>
+                                </div>
+                            </div>
+
+                            <div class="technical-innovation">
+                                <h3><i class="fas fa-cogs"></i> 技术创新解析</h3>
+
+                                <div class="innovation-analysis">
+                                    <h4>1. 间接观测的艺术</h4>
+                                    <p>Weir最巧妙的地方是<strong>通过延迟间接推断缓存状态</strong>。由于无法直接访问RNIC内部的缓存使用情况，Weir选择了一个可观测的外部指标
+                                        - WQE处理延迟。这种"曲线救国"的方法体现了系统设计中的智慧。</p>
+                                </div>
+
+                                <div class="innovation-analysis">
+                                    <h4>2. 生产者-消费者模型的精准建模</h4>
+                                    <p>Weir将复杂的RNIC行为抽象为简单的<strong>生产者-消费者模型</strong>：CPU生产WQE，RNIC消费WQE。这种抽象使得问题变得清晰：当生产速度超过消费速度时，缓存就会溢出。解决方案就是调节生产速度。
+                                    </p>
+                                </div>
+
+                                <div class="innovation-analysis">
+                                    <h4>3. 自适应控制的工程智慧</h4>
+                                    <p>AIAD算法的选择体现了深刻的工程考量。与TCP拥塞控制类似，这种算法能够在<strong>快速响应和系统稳定性之间取得平衡</strong>。加性增加确保快速收敛，加性减少保证系统稳定。
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="practical-implications">
+                                <h3><i class="fas fa-lightbulb"></i> 实践意义分析</h3>
+
+                                <div class="implication-grid">
+                                    <div class="implication-item">
+                                        <h4>🔧 部署简便性</h4>
+                                        <p>Weir作为软件中间件，最大的优势是<strong>部署门槛低</strong>。无需更换硬件，无需修改应用程序，只需要升级软件栈即可获得显著的性能提升。这使得它在实际生产环境中具有很高的可行性。
+                                        </p>
+                                    </div>
+                                    <div class="implication-item">
+                                        <h4>💰 成本效益</h4>
+                                        <p>相比于硬件升级，软件优化的<strong>成本几乎为零</strong>。Weir能够让现有硬件发挥出更大的潜力，延长硬件生命周期，为用户节省大量的硬件采购成本。
+                                        </p>
+                                    </div>
+                                    <div class="implication-item">
+                                        <h4>🎯 精准优化</h4>
+                                        <p>Weir针对WQE缓存这一<strong>被忽视的关键瓶颈</strong>进行优化。很多研究关注QPC、MTT等缓存，但WQE缓存的重要性往往被低估。Weir填补了这一空白。
+                                        </p>
+                                    </div>
+                                    <div class="implication-item">
+                                        <h4>🔄 可扩展性</h4>
+                                        <p>Weir的思路具有很强的<strong>可扩展性</strong>。类似的延迟感知和速率控制机制可以应用到其他资源（如内存、网络带宽等）的管理中。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="limitations-discussion">
+                                <h3><i class="fas fa-exclamation-triangle"></i> 局限性讨论</h3>
+                                <div class="limitation-items">
+                                    <div class="limitation-item">
+                                        <h4>📈 延迟敏感性</h4>
+                                        <p>Weir依赖于延迟测量的准确性。在网络抖动较大或者负载极不均匀的环境下，延迟信号可能出现噪声，影响控制算法的效果。</p>
+                                    </div>
+                                    <div class="limitation-item">
+                                        <h4>🎛️ 参数调优</h4>
+                                        <p>虽然Weir提供了自适应机制，但在某些特殊场景下，可能仍需要人工调优base_delay、α、β等参数，增加了运维复杂度。</p>
+                                    </div>
+                                    <div class="limitation-item">
+                                        <h4>🔄 反应时延</h4>
+                                        <p>由于基于反馈控制，Weir对突发流量的响应存在一定时延。在极端的流量模式变化下，可能出现短暂的性能波动。</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section" id="significance">
+                        <h2><i class="fas fa-star"></i> 对可扩展QP的意义</h2>
+
+                        <div class="significance-grid">
+                            <div class="significance-card software-solution">
+                                <h3><i class="fas fa-code"></i> 软件解决方案范式</h3>
+                                <ul>
+                                    <li><strong>成本优势：</strong>相比硬件方案，软件解决方案具有零边际成本</li>
+                                    <li><strong>快速部署：</strong>无需硬件更换，可以快速在现有系统中部署</li>
+                                    <li><strong>持续优化：</strong>软件方案可以持续迭代和优化算法</li>
+                                    <li><strong>通用适用：</strong>适用于不同厂商的RDMA设备，具有良好的通用性</li>
+                                </ul>
+                            </div>
+
+                            <div class="significance-card cache-awareness">
+                                <h3><i class="fas fa-memory"></i> 缓存感知设计</h3>
+                                <ul>
+                                    <li><strong>WQE缓存关注：</strong>首次系统性地关注WQE缓存对可扩展性的影响</li>
+                                    <li><strong>多级缓存协同：</strong>揭示了WQE、ICM、MTT/MPT缓存之间的相互影响</li>
+                                    <li><strong>间接监控方法：</strong>通过延迟间接推断缓存状态的创新方法</li>
+                                    <li><strong>实时控制机制：</strong>基于实时反馈的动态缓存压力控制</li>
+                                </ul>
+                            </div>
+
+                            <div class="significance-card control-theory">
+                                <h3><i class="fas fa-sliders-h"></i> 控制理论应用</h3>
+                                <ul>
+                                    <li><strong>AIAD算法：</strong>将成熟的控制理论应用到RDMA资源管理</li>
+                                    <li><strong>自适应参数：</strong>根据系统规模自动调整控制参数</li>
+                                    <li><strong>稳定性保证：</strong>确保系统在各种负载下的稳定收敛</li>
+                                    <li><strong>响应速度：</strong>在稳定性和响应速度之间取得良好平衡</li>
+                                </ul>
+                            </div>
+
+                            <div class="significance-card practical-impact">
+                                <h3><i class="fas fa-industry"></i> 实际应用价值</h3>
+                                <ul>
+                                    <li><strong>现有系统升级：</strong>为现有RDMA部署提供立即可用的性能提升</li>
+                                    <li><strong>硬件投资延期：</strong>通过软件优化延缓硬件升级需求</li>
+                                    <li><strong>运维透明性：</strong>对应用程序完全透明，降低运维负担</li>
+                                    <li><strong>规模化部署：</strong>支持大规模数据中心的RDMA网络扩展</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="methodology-contribution">
+                            <h3><i class="fas fa-microscope"></i> 方法论贡献</h3>
+
+                            <div class="methodology-aspects">
+                                <div class="aspect-item">
+                                    <h4>1. 问题诊断方法</h4>
+                                    <p>Weir提供了一套完整的RDMA性能问题诊断方法：</p>
+                                    <ul>
+                                        <li>通过延迟模式识别缓存压力</li>
+                                        <li>通过多级缓存未命中率关联分析</li>
+                                        <li>基于生产者-消费者模型的根因分析</li>
+                                    </ul>
+                                </div>
+
+                                <div class="aspect-item">
+                                    <h4>2. 性能优化策略</h4>
+                                    <p>建立了软件控制硬件行为的优化范式：</p>
+                                    <ul>
+                                        <li>间接观测 + 实时控制的闭环优化</li>
+                                        <li>自适应参数调整的智能化管理</li>
+                                        <li>最小侵入性的系统集成方法</li>
+                                    </ul>
+                                </div>
+
+                                <div class="aspect-item">
+                                    <h4>3. 评估基准建立</h4>
+                                    <p>为RDMA中间件性能评估建立了基准：</p>
+                                    <ul>
+                                        <li>多维度性能指标体系（吞吐量、延迟、缓存未命中率）</li>
+                                        <li>不同负载模式下的对比评估方法</li>
+                                        <li>收敛性和稳定性的量化分析</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="future-implications">
+                            <h3><i class="fas fa-road"></i> 未来发展方向</h3>
+
+                            <div class="future-directions">
+                                <div class="direction-item">
+                                    <h4><i class="fas fa-robot"></i> 智能化增强</h4>
+                                    <ul>
+                                        <li>基于机器学习的负载模式识别和预测</li>
+                                        <li>自动化参数调优和系统自愈能力</li>
+                                        <li>多RNIC协同的全局优化策略</li>
+                                    </ul>
+                                </div>
+
+                                <div class="direction-item">
+                                    <h4><i class="fas fa-expand"></i> 功能扩展</h4>
+                                    <ul>
+                                        <li>支持更多类型的硬件资源控制（带宽、内存等）</li>
+                                        <li>与现有拥塞控制算法的协同优化</li>
+                                        <li>云原生环境下的动态资源管理</li>
+                                    </ul>
+                                </div>
+
+                                <div class="direction-item">
+                                    <h4><i class="fas fa-network-wired"></i> 生态集成</h4>
+                                    <ul>
+                                        <li>与Kubernetes等容器编排平台的集成</li>
+                                        <li>与监控和可观测性系统的深度整合</li>
+                                        <li>标准化的中间件接口和配置管理</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="paper-navigation">
+                        <div class="nav-buttons">
+                            <a href="rdma-causes-analysis.html" class="nav-btn">
+                                <i class="fas fa-chevron-left"></i>
+                                <div>
+                                    <span class="nav-label">上一篇</span>
+                                    <span class="nav-title">RDMA性能异常根本原因分析</span>
+                                </div>
+                            </a>
+                            <a href="../index.html" class="nav-btn">
+                                <i class="fas fa-home"></i>
+                                <div>
+                                    <span class="nav-label">返回首页</span>
+                                    <span class="nav-title">RDMA研究平台</span>
+                                </div>
+                            </a>
+                            <a href="srnic-analysis.html" class="nav-btn">
+                                <div>
+                                    <span class="nav-label">下一篇</span>
+                                    <span class="nav-title">SRNIC架构</span>
+                                </div>
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2025 RDMA研究平台. 论文解读仅供学术交流使用。</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 论文预览模态框 -->
+    <div id="paperPreviewModal" class="preview-modal">
+        <div class="preview-modal-content">
+            <div class="preview-header">
+                <h3>论文原文预览</h3>
+                <span class="close-btn" onclick="closePaperPreview()">&times;</span>
+            </div>
+            <div class="preview-body">
+                <div class="preview-info">
+                    <h4>Weir Delay-based RNIC Cache Control Software Middleware.pdf</h4>
+                    <p>Weir是一种基于延迟感知的软件中间件，专门用于控制RNIC缓存利用率，解决高并发QP场景下WQE缓存未命中导致的性能急剧下降问题。通过监控WQE生命周期和实时缓存压力，采用自适应速率控制算法动态调整门铃频率。
+                    </p>
+                    <div class="preview-actions">
+                        <button class="download-btn" onclick="downloadPaper()">
+                            <i class="fas fa-download"></i>
+                            下载论文
+                        </button>
+                        <button class="view-full-btn" onclick="viewFullPaper()">
+                            <i class="fas fa-external-link-alt"></i>
+                            完整阅读
+                        </button>
+                    </div>
+                </div>
+                <div class="preview-pdf">
+                    <iframe
+                        src="../../try/papers/extracted_papers/可扩展相关论文/Weir Delay-based RNIC Cache Control Software Middleware for Scalable RDMA Networks.pdf"
+                        width="100%" height="500px"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/main.js"></script>
+    <script src="../scripts/paper.js"></script>
+    <script>
+        function openPaperPreview() {
+            document.getElementById('paperPreviewModal').style.display = 'block';
+        }
+
+        function closePaperPreview() {
+            document.getElementById('paperPreviewModal').style.display = 'none';
+        }
+
+        function downloadPaper() {
+            const link = document.createElement('a');
+            link.href = '../../try/papers/extracted_papers/可扩展相关论文/Weir Delay-based RNIC Cache Control Software Middleware for Scalable RDMA Networks.pdf';
+            link.download = 'Weir Delay-based RNIC Cache Control Software Middleware for Scalable RDMA Networks.pdf';
+            link.click();
+        }
+
+        function viewFullPaper() {
+            window.open('../../try/papers/extracted_papers/可扩展相关论文/Weir Delay-based RNIC Cache Control Software Middleware for Scalable RDMA Networks.pdf', '_blank');
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('paperPreviewModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>
