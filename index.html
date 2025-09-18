@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="zh-CN">
 
@@ -244,4 +245,252 @@
     </div>
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDMA可扩展性学习平台 - 综合版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+        }
+
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .platform-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e0e6ed;
+        }
+
+        .platform-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .platform-card h2 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .platform-card .icon {
+            font-size: 2rem;
+            color: #667eea;
+        }
+
+        .platform-card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .platform-card .features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .platform-card .features li {
+            padding: 0.5rem 0;
+            color: #555;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .platform-card .features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .footer {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 15px;
+            margin-top: 3rem;
+        }
+
+        .footer h4 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1.1rem;
+            }
+
+            .platforms {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .platform-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 RDMA可扩展性学习平台</h1>
+            <p>整合三个专业学习资源，提供全面的RDMA可扩展性学习体验</p>
+            <p><strong>更新时间：</strong> 2025年9月</p>
+        </div>
+
+        <div class="platforms">
+            <div class="platform-card">
+                <h2><span class="icon">📊</span> RDMA QP可扩展性学习</h2>
+                <p>深入理解RDMA队列对(QP)的可扩展性问题，学习从基础概念到高级优化的完整知识体系。</p>
+                <ul class="features">
+                    <li>QP可扩展性基础概念</li>
+                    <li>性能瓶颈分析与优化</li>
+                    <li>实际编程练习指导</li>
+                    <li>性能测试工具使用</li>
+                    <li>学习进度跟踪系统</li>
+                </ul>
+                <a href="rdma_qp_scalability_learning.html" class="btn">开始学习</a>
+            </div>
+
+            <div class="platform-card">
+                <h2><span class="icon">📚</span> RDMA学习站点</h2>
+                <p>专业的论文分析平台，提供6篇核心论文的深度解读，涵盖最新的RDMA可扩展性研究成果。</p>
+                <ul class="features">
+                    <li>6篇核心论文深度解析</li>
+                    <li>技术细节可视化展示</li>
+                    <li>PDF原文预览功能</li>
+                    <li>学术意义分析</li>
+                    <li>交互式学习体验</li>
+                </ul>
+                <a href="rdma_learning_site/index.html" class="btn btn-secondary">查看论文</a>
+            </div>
+
+            <div class="platform-card">
+                <h2><span class="icon">🎯</span> 综合学习资源</h2>
+                <p>整合的学习资源库，提供从入门到精通的完整学习路径，适合不同水平的学习者。</p>
+                <ul class="features">
+                    <li>分层学习内容设计</li>
+                    <li>理论与实践结合</li>
+                    <li>最新技术动态跟踪</li>
+                    <li>学习社区支持</li>
+                    <li>个性化学习建议</li>
+                </ul>
+                <a href="try/rdma-learning.html" class="btn btn-success">探索资源</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <h4>RDMA可扩展性学习平台 - 综合版</h4>
+            <p>整合三个专业学习资源，提供全面的RDMA可扩展性学习体验</p>
+            <p><strong>更新时间：</strong> 2025年9月</p>
+            <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.7;">
+                本平台内容基于公开学术资源整理，仅供学习研究使用
+            </p>
+        </div>
+    </div>
+</body>
+
+>>>>>>> f4993643c1f9a1d80b667eba5256e737ff70df81
 </html>
