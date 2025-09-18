@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDMA可扩展性队列对 - 专业学习平台</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-network-wired"></i>
+                <span>RDMA研究平台</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home">首页</a></li>
+                <li><a href="#papers">核心论文</a></li>
+                <li><a href="#concepts">基础概念</a></li>
+                <li><a href="#resources">学习资源</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero" id="home">
+        <div class="hero-content">
+            <h1 class="hero-title">RDMA可扩展性队列对</h1>
+            <p class="hero-subtitle">深入理解远程直接内存访问的可扩展性挑战与解决方案</p>
+            <p class="hero-description">本平台汇集了最新的学术研究成果，帮助初学者和研究人员系统掌握RDMA QP可扩展性的核心理论和实践技术</p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-number">6</span>
+                    <span class="stat-label">核心论文</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">2025</span>
+                    <span class="stat-label">最新研究</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">开源免费</span>
+                </div>
+            </div>
+            <a href="#papers" class="cta-button">开始学习</a>
+        </div>
+        <div class="hero-visual">
+            <div class="floating-elements">
+                <div class="element qp-element">QP</div>
+                <div class="element rnic-element">RNIC</div>
+                <div class="element network-element">Network</div>
+                <div class="element scalability-element">Scalability</div>
+            </div>
+        </div>
+    </header>
+
+    <section id="concepts" class="concepts-section">
+        <div class="container">
+            <h2 class="section-title">RDMA可扩展性核心概念</h2>
+            <div class="concepts-grid">
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <h3>队列对 (Queue Pair)</h3>
+                    <p>RDMA通信的基本抽象，包含发送队列(SQ)和接收队列(RQ)，是实现高性能网络通信的关键组件。</p>
+                </div>
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </div>
+                    <h3>可扩展性挑战</h3>
+                    <p>随着连接数量增长，QP资源消耗呈指数级增长，导致内存瓶颈和性能急剧下降，成为大规模部署的主要障碍。</p>
+                </div>
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <h3>RNIC架构</h3>
+                    <p>RDMA网络接口卡的硬件设计直接影响QP可扩展性，片上缓存容量和处理单元数量是关键限制因素。</p>
+                </div>
+                <div class="concept-card">
+                    <div class="concept-icon">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <h3>连接共享</h3>
+                    <p>通过复用和共享机制减少实际连接数量，实现在保持性能的同时显著提升系统可扩展性。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="papers" class="papers-section">
+        <div class="container">
+            <h2 class="section-title">核心研究论文</h2>
+            <p class="section-subtitle">深入解读RDMA可扩展性领域的重要学术成果</p>
+
+            <div class="papers-grid">
+                <div class="paper-card featured">
+                    <div class="paper-header">
+                        <span class="paper-badge new">最新</span>
+                        <span class="paper-year">2025</span>
+                    </div>
+                    <h3 class="paper-title">A Scalable Reliable Connection for RDMA with Decoupled QPs and Connection
+                    </h3>
+                    <p class="paper-authors">Microsoft Research</p>
+                    <p class="paper-summary">提出了革命性的SRC(Scalable Reliable Connection)概念，通过解耦QP和连接实现了突破性的可扩展性改进。</p>
+                    <div class="paper-tags">
+                        <span class="tag">SRC</span>
+                        <span class="tag">解耦设计</span>
+                        <span class="tag">连接共享</span>
+                    </div>
+                    <a href="papers/src-analysis.html" class="paper-link">详细解读 <i class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="paper-card">
+                    <div class="paper-header">
+                        <span class="paper-badge">架构创新</span>
+                        <span class="paper-year">2023</span>
+                    </div>
+                    <h3 class="paper-title">SRNIC: A Scalable Architecture for RDMA NICs</h3>
+                    <p class="paper-authors">NSDI 2023</p>
+                    <p class="paper-summary">重新设计RDMA NIC架构，通过协议与架构协同设计实现了18倍的可扩展性提升。</p>
+                    <div class="paper-tags">
+                        <span class="tag">硬件架构</span>
+                        <span class="tag">QPC优化</span>
+                        <span class="tag">MTT缓存</span>
+                    </div>
+                    <a href="papers/srnic-analysis.html" class="paper-link">详细解读 <i class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="paper-card">
+                    <div class="paper-header">
+                        <span class="paper-badge">中间件</span>
+                        <span class="paper-year">2024</span>
+                    </div>
+                    <h3 class="paper-title">Weir: Delay-based RNIC Cache Control Software Middleware</h3>
+                    <p class="paper-authors">软件中间件解决方案</p>
+                    <p class="paper-summary">基于延迟感知的软件中间件，通过WQE缓存控制实现了60%的性能提升。</p>
+                    <div class="paper-tags">
+                        <span class="tag">软件中间件</span>
+                        <span class="tag">缓存控制</span>
+                        <span class="tag">延迟感知</span>
+                    </div>
+                    <a href="papers/weir-analysis.html" class="paper-link">详细解读 <i class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="paper-card">
+                    <div class="paper-header">
+                        <span class="paper-badge">传输协议</span>
+                        <span class="paper-year">2023</span>
+                    </div>
+                    <h3 class="paper-title">Scalable RDMA Transport with Efficient Connection Sharing</h3>
+                    <p class="paper-authors">SRM传输协议</p>
+                    <p class="paper-summary">通过连接共享机制实现了4-20倍的延迟改进，彻底解决了连接数爆炸问题。</p>
+                    <div class="paper-tags">
+                        <span class="tag">连接共享</span>
+                        <span class="tag">SRM协议</span>
+                        <span class="tag">多路复用</span>
+                    </div>
+                    <a href="papers/connection-sharing-analysis.html" class="paper-link">详细解读 <i
+                            class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="paper-card">
+                    <div class="paper-header">
+                        <span class="paper-badge">系统分析</span>
+                        <span class="paper-year">2023</span>
+                    </div>
+                    <h3 class="paper-title">Revisiting the Underlying Causes of RDMA Performance Anomalies</h3>
+                    <p class="paper-authors">性能分析研究</p>
+                    <p class="paper-summary">深入分析RDMA性能异常的根本原因，为可扩展性研究提供了重要的理论基础。</p>
+                    <div class="paper-tags">
+                        <span class="tag">性能分析</span>
+                        <span class="tag">系统研究</span>
+                        <span class="tag">理论基础</span>
+                    </div>
+                    <a href="papers/rdma-causes-analysis.html" class="paper-link">详细解读 <i
+                            class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="paper-card">
+                    <div class="paper-header">
+                        <span class="paper-badge">中文研究</span>
+                        <span class="paper-year">2024</span>
+                    </div>
+                    <h3 class="paper-title">大规模RDMA网络连接可扩展性研究</h3>
+                    <p class="paper-authors">中文学术研究</p>
+                    <p class="paper-summary">从用户态视角优化连接可扩展性，提出了Sluice和Weir两套完整解决方案。</p>
+                    <div class="paper-tags">
+                        <span class="tag">用户态优化</span>
+                        <span class="tag">QP复用</span>
+                        <span class="tag">门铃控制</span>
+                    </div>
+                    <a href="papers/chinese-scalability-analysis.html" class="paper-link">详细解读 <i
+                            class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="resources" class="resources-section">
+        <div class="container">
+            <h2 class="section-title">学习资源</h2>
+            <div class="resources-grid">
+                <div class="resource-category">
+                    <h3><i class="fas fa-book"></i> 理论基础</h3>
+                    <ul>
+                        <li><a href="#">RDMA编程基础教程</a></li>
+                        <li><a href="#">队列对状态机详解</a></li>
+                        <li><a href="#">内存区域管理</a></li>
+                        <li><a href="#">完成队列机制</a></li>
+                    </ul>
+                </div>
+                <div class="resource-category">
+                    <h3><i class="fas fa-code"></i> 实践代码</h3>
+                    <ul>
+                        <li><a href="#">libibverbs示例程序</a></li>
+                        <li><a href="#">性能测试工具</a></li>
+                        <li><a href="#">调试工具集</a></li>
+                        <li><a href="#">优化技巧实现</a></li>
+                    </ul>
+                </div>
+                <div class="resource-category">
+                    <h3><i class="fas fa-chart-line"></i> 性能分析</h3>
+                    <ul>
+                        <li><a href="#">perftest基准测试</a></li>
+                        <li><a href="#">缓存未命中分析</a></li>
+                        <li><a href="#">延迟测量方法</a></li>
+                        <li><a href="#">吞吐量优化</a></li>
+                    </ul>
+                </div>
+                <div class="resource-category">
+                    <h3><i class="fas fa-graduation-cap"></i> 高级主题</h3>
+                    <ul>
+                        <li><a href="#">DCT动态连接</a></li>
+                        <li><a href="#">SRQ共享队列</a></li>
+                        <li><a href="#">XRC扩展连接</a></li>
+                        <li><a href="#">拥塞控制算法</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>关于平台</h4>
+                    <p>专注于RDMA可扩展性研究的学术交流平台，汇集最新研究成果和实践经验。</p>
+                </div>
+                <div class="footer-section">
+                    <h4>学习路径</h4>
+                    <ul>
+                        <li>基础概念理解</li>
+                        <li>核心论文研读</li>
+                        <li>实验环境搭建</li>
+                        <li>性能优化实践</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>技术栈</h4>
+                    <ul>
+                        <li>InfiniBand / RoCE</li>
+                        <li>libibverbs API</li>
+                        <li>DPDK / SPDK</li>
+                        <li>Linux RDMA子系统</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 RDMA研究平台. 本平台内容基于公开学术资源整理，仅供学习研究使用。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="scripts/main.js"></script>
+</body>
+
+</html>
